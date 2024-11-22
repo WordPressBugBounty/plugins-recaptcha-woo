@@ -3,8 +3,8 @@ Contributors: ElliotVS, RelyWP
 Tags: recaptcha,woocommerce,checkout,spam,protect
 Donate link: https://www.paypal.com/donate/?hosted_button_id=RX28BBH7L5XDS
 Requires at least: 4.7
-Tested up to: 6.6.1
-Stable Tag: trunk
+Tested up to: 6.7.1
+Stable Tag: 1.3.5
 License: GPLv3 or later.
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -67,6 +67,14 @@ Want a user-friendly, privacy-preserving reCAPTCHA alternative? Check out the <a
 2. Example reCAPTCHA on the Checkout Page
 
 == Changelog ==
+
+= Version 1.3.5 - 22nd November 2024 =
+- Fix: Added option to decide where scripts should be loaded pages other than My Account and Checkout.
+
+= Version 1.3.4 - 22nd November 2024 =
+- Fix: Fixed the scripts being loaded on other pages when not needed.
+- Other: Tested with WordPress 6.7.1
+- Other: Tested with WooCommerce 9.4.2
 
 = Version 1.3.3 - 15th February 2024 =
 - Tweak: Set the loading of JS file and reCAPTCHA script to be deferred.
