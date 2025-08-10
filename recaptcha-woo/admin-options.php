@@ -42,11 +42,15 @@ function rcfwc_keys_updated() {
 /**
  * Enqueue admin scripts
  */
-function rcfwc_admin_script_enqueue() {
-	wp_register_script("recaptcha", "https://www.google.com/recaptcha/api.js?explicit&hl=" . get_locale());
-	wp_enqueue_script("recaptcha");
-  }
-  add_action( 'admin_enqueue_scripts', 'rcfwc_admin_script_enqueue' );
+function rcfwc_admin_script_enqueue( $hook ) {
+	// Only load on this plugin settings page
+	if ( isset( $_GET['page'] ) && $_GET['page'] === 'recaptcha-woo/admin-options.php' ) {
+		wp_register_script( 'recaptcha', 'https://www.google.com/recaptcha/api.js?hl=' . get_locale() );
+		wp_enqueue_script( 'recaptcha' );
+		wp_enqueue_style( 'rcfwc-admin', plugins_url( 'css/admin.css', __FILE__ ), array(), '1.4.3' );
+	}
+}
+add_action( 'admin_enqueue_scripts', 'rcfwc_admin_script_enqueue' );
   
 // Admin test form to check reCAPTCHA response
 function rcfwc_admin_test() {
@@ -59,7 +63,7 @@ function rcfwc_admin_test() {
 		$error = '';
 		if(isset($check['success'])) $success = $check['success'];
 		if(isset($check['error_code'])) $error = $check['error_code'];
-		echo '<br/><div style="padding: 20px 20px 25px 20px; background: #fff; border-radius: 20px; max-width: 500px; border: 2px solid #d5d5d5;">';
+		echo '<br/><div class="rcfwc-test-response-box">';
 		if($success != true) {
 			echo '<p style="font-weight: 600; font-size: 19px; margin-top: 0; margin-bottom: 0;">' . __( 'Almost done...', 'recaptcha-woo' ) . '</p>';
 		}
@@ -71,7 +75,7 @@ function rcfwc_admin_test() {
 			. '</p>';
 		} else {
 			if($success == true) {
-				echo '<p style="font-weight: bold; color: green; margin-top: -2px; margin-bottom: -4px;"><span class="dashicons dashicons-yes-alt"></span> ' . __( 'Success! reCAPTCHA seems to be working correctly with your API keys.', 'recaptcha-woo' ) . '</p>';
+            	echo '<div class="rcfwc-status-success" style="margin: 0;"><span class="dashicons dashicons-yes-alt"></span> ' . __( 'Success! reCAPTCHA seems to be working correctly with your API keys.', 'recaptcha-woo' ) . '</div>';
 				update_option('rcfwc_tested', 'yes');
 			} else {
 				if($error == "missing-input-response") {
@@ -102,283 +106,258 @@ function rcfwc_admin_test() {
 // Show Settings Page
 function rcfwc_settings_page() {
 ?>
-<div class="wrap">
+<div class="rcfwc-modern-wrap">
+    <div class="rcfwc-container">
+        <div class="rcfwc-header">
+            <h1><?php echo __( 'reCAPTCHA for WooCommerce', 'recaptcha-woo' ); ?></h1>
+            <p><?php echo __( 'Protect your WooCommerce forms and checkout with Google reCAPTCHA to help prevent spam and abuse.', 'recaptcha-woo' ); ?></p>
+        </div>
 
-<h1><?php echo __( 'reCAPTCHA for WooCommerce', 'recaptcha-woo' ); ?></h1>
+        <div class="rcfwc-quick-links">
+            <div class="links-grid">
+                <a href="https://relywp.com/blog/how-to-add-google-recaptcha-to-woocommerce/?utm_source=plugin" target="_blank">
+                    <?php echo __('View Setup Guide', 'recaptcha-woo'); ?>
+					<span class="dashicons dashicons-external" style="margin: 2.5px 0 -2.5px 0; font-size: 14px;"></span>
+                </a>
+                <span style="color: #9ca3af;">•</span>
+                <a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank">
+                    <?php echo __('Like the plugin? Please leave a review', 'recaptcha-woo'); ?> ⭐️⭐️⭐️⭐️⭐️
+                </a>
+            </div>
+        </div>
 
-<p><?php echo __( 'This plugin will add Google reCAPTCHA to your WooCommerce forms and checkout to help prevent spam.', 'recaptcha-woo' ); ?></p>
+        <?php
+        if(empty(get_option('rcfwc_tested')) || get_option('rcfwc_tested') != 'yes') {
+            echo rcfwc_admin_test();
+        } else {
+            echo '<div class="rcfwc-status-success"><span class="dashicons dashicons-yes-alt"></span> ' . __( 'Success! reCAPTCHA seems to be working correctly with your API keys.', 'recaptcha-woo' ) . '</div>';
+        } ?>
 
-<div class="rcfwc-admin-promo-top">
-	<p>
-		<a href="https://relywp.com/blog/how-to-add-google-recaptcha-to-woocommerce/?utm_source=plugin" title="View our reCAPTCHA plugin setup guide." target="_blank"><?php echo __('View setup guide', 'recaptcha-woo'); ?><span class="dashicons dashicons-external" style="margin-left: 2px; text-decoration: none;"></span></a> &nbsp;&#x2022;&nbsp; <?php echo __('Like this plugin?', 'recaptcha-woo'); ?> <a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank" title="<?php echo __('Review on WordPress.org', 'recaptcha-woo'); ?>"><?php echo __('Please submit a review', 'recaptcha-woo'); ?></a> <a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank" title="<?php echo __('Review on WordPress.org', 'recaptcha-woo'); ?>" style="text-decoration: none;">
-		⭐️⭐️⭐️⭐️⭐️
-		</a>
-	</p>
-</div>
+        <div class="rcfwc-settings-grid">
+            <div class="rcfwc-main-settings">
+                <form method="post" action="options.php">
+                    <?php settings_fields( 'rcfwc-settings-group' ); ?>
+                    <?php do_settings_sections( 'rcfwc-settings-group' ); ?>
 
-<?php
-if(empty(get_option('rcfwc_tested')) || get_option('rcfwc_tested') != 'yes') {
-	echo rcfwc_admin_test();
-} else {
-	echo '<p style="font-weight: bold; color: green; margin-top: 28px;"><span class="dashicons dashicons-yes-alt"></span> ' . __( 'Success! reCAPTCHA seems to be working correctly with your API keys.', 'recaptcha-woo' ) . '</p>';
-} ?>
+                    <div class="rcfwc-card">
+                        <div class="rcfwc-card-header">
+                            <h2><?php echo __( 'API Key Settings', 'recaptcha-woo' ); ?></h2>
+                        </div>
+                        <div class="rcfwc-card-content">
+                            <p class="rcfwc-help-text" style="margin-bottom: 20px;">
+                                <?php echo __( 'Get your reCAPTCHA keys from:', 'recaptcha-woo' ); ?> 
+                                <a href="https://www.google.com/recaptcha/admin/create" target="_blank">https://www.google.com/recaptcha/admin/create</a>
+                            </p>
+                            <p class="rcfwc-help-text" style="margin-bottom: 20px;">
+                                <?php echo __( 'Currently reCAPTCHA v2 ("challenge") is the only version supported.' ); ?>
+							</p>
+							<p class="rcfwc-help-text">
+								<?php echo __( 'When creating your API key, enable the "Challenge v2" option.', 'recaptcha-woo' ); ?>
+                            </p>
 
-<form method="post" action="options.php">
+                            <div class="rcfwc-form-group">
+                                <label class="rcfwc-form-label"><?php echo __( 'Site Key / ID', 'recaptcha-woo' ); ?></label>
+                                <input type="text" name="rcfwc_key" class="rcfwc-form-input" value="<?php echo esc_attr( get_option('rcfwc_key') ); ?>" />
+                            </div>
 
-    <?php settings_fields( 'rcfwc-settings-group' ); ?>
-    <?php do_settings_sections( 'rcfwc-settings-group' ); ?>
+                            <div class="rcfwc-form-group">
+                                <label class="rcfwc-form-label"><?php echo __( 'Secret Key', 'recaptcha-woo' ); ?></label>
+                                <input type="text" name="rcfwc_secret" class="rcfwc-form-input" value="<?php echo esc_attr( get_option('rcfwc_secret') ); ?>" />
+                            </div>
 
-    <table class="form-table">
+                            <div class="rcfwc-form-group">
+                                <label class="rcfwc-form-label"><?php echo __( 'reCAPTCHA Theme', 'recaptcha-woo' ); ?></label>
+                                <select name="rcfwc_theme" class="rcfwc-form-select">
+                                    <option value="light"<?php if(!get_option('rcfwc_theme') || get_option('rcfwc_theme') == "light") { ?>selected<?php } ?>>
+                                        <?php esc_html_e( 'Light', 'recaptcha-woo' ); ?>
+                                    </option>
+                                    <option value="dark"<?php if(get_option('rcfwc_theme') == "dark") { ?>selected<?php } ?>>
+                                        <?php esc_html_e( 'Dark', 'recaptcha-woo' ); ?>
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-    <tr valign="top">
-    	<th scope="row" style="padding-bottom: 0;">
-    	<p style="font-size: 19px; margin-top: 0;"><?php echo __( 'API Key Settings:', 'recaptcha-woo' ); ?></p>
-    	<p style="margin-bottom: 2px;"><?php echo __( 'You can get your reCAPTCHA keys here:', 'recaptcha-woo' ); ?> <a href="https://www.google.com/recaptcha/admin/create" target="_blank">https://www.google.com/recaptcha/admin/create</a></p>
-		
-		<p>
-			<?php echo __( 'Currently reCAPTCHA v2 ("challenge") is the only version supported with this plugin.', 'recaptcha-woo' ); ?>
-		</p>
-		<p>
-			<?php echo __( 'When creating your API key you will need to enable the "Challenge v2" or "Will you use challenges?" option.', 'recaptcha-woo' ); ?>
-		</p>
-	</th>
-    </tr>
+                    <div class="rcfwc-card">
+                        <div class="rcfwc-card-header">
+                            <h2><?php echo __( 'WordPress Forms', 'recaptcha-woo' ); ?></h2>
+                        </div>
+                        <div class="rcfwc-card-content">
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_login" class="rcfwc-checkbox" <?php if(get_option('rcfwc_login')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'WordPress Login', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
 
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_register" class="rcfwc-checkbox" <?php if(get_option('rcfwc_register')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'WordPress Register', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
 
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_woo_reset" class="rcfwc-checkbox" <?php if(get_option('rcfwc_woo_reset')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'Reset Password', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    </table>
+                    <div class="rcfwc-card" <?php if ( !class_exists( 'WooCommerce' ) ) { ?>style="opacity: 0.5; pointer-events: none;"<?php } ?>>
+                        <div class="rcfwc-card-header">
+                            <h2><?php echo __( 'WooCommerce Forms', 'recaptcha-woo' ); ?></h2>
+                        </div>
+                        <div class="rcfwc-card-content">
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_woo_login" class="rcfwc-checkbox" <?php if(get_option('rcfwc_woo_login')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'WooCommerce Login', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
 
-    <table class="form-table">
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_woo_register" class="rcfwc-checkbox" <?php if(get_option('rcfwc_woo_register')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'WooCommerce Register', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
 
-        <tr valign="top">
-        <th scope="row"><?php echo __( 'Site Key / ID', 'recaptcha-woo' ); ?></th>
-        <td><input type="text" name="rcfwc_key" value="<?php echo esc_attr( get_option('rcfwc_key') ); ?>" /></td>
-        </tr>
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_woo_checkout" class="rcfwc-checkbox" <?php if(get_option('rcfwc_woo_checkout')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'WooCommerce Checkout', 'recaptcha-woo' ); ?></label>
+                                </div>
+                                <div class="rcfwc-checkbox-group" style="margin-left: 26px; margin-top: 8px;">
+                                    <input type="checkbox" name="rcfwc_guest_only" class="rcfwc-checkbox" <?php if(get_option('rcfwc_guest_only')) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'Guest Checkout Only', 'recaptcha-woo' ); ?></label>
+                                </div>
+                            </div>
 
-        <tr valign="top">
-        <th scope="row"><?php echo __( 'Legacy reCAPTCHA secret key ', 'recaptcha-woo' ); ?></th>
-        <td><input type="text" name="rcfwc_secret" value="<?php echo esc_attr( get_option('rcfwc_secret') ); ?>" /></td>
-        </tr>
+                            <div class="rcfwc-form-group">
+                                <label class="rcfwc-form-label"><?php echo __( 'Widget Location on Checkout', 'recaptcha-woo' ); ?></label>
+                                <select name="rcfwc_woo_checkout_pos" class="rcfwc-form-select">
+                                    <option value="beforepay" <?php if (!get_option('rcfwc_woo_checkout_pos') || get_option('rcfwc_woo_checkout_pos') == "beforepay") { ?>selected<?php } ?>>
+                                        <?php esc_html_e('Before Payment', 'recaptcha-woo'); ?>
+                                    </option>
+                                    <option value="afterpay" <?php if (get_option('rcfwc_woo_checkout_pos') == "afterpay") { ?>selected<?php } ?>>
+                                        <?php esc_html_e('After Payment', 'recaptcha-woo'); ?>
+                                    </option>
+                                    <option value="beforebilling" <?php if (get_option('rcfwc_woo_checkout_pos') == "beforebilling") { ?>selected<?php } ?>>
+                                        <?php esc_html_e('Before Billing', 'recaptcha-woo'); ?>
+                                    </option>
+                                    <option value="afterbilling" <?php if (get_option('rcfwc_woo_checkout_pos') == "afterbilling") { ?>selected<?php } ?>>
+                                        <?php esc_html_e('After Billing', 'recaptcha-woo'); ?>
+                                    </option>
+                                </select>
+                            </div>
 
-		<tr valign="top">
-			<th scope="row"><?php echo __( 'reCAPTCHA Theme', 'recaptcha-woo' ); ?></th>
-			<td>
-				<select name="rcfwc_theme">
-					<option value="light"<?php if(!get_option('rcfwc_theme') || get_option('rcfwc_theme') == "light") { ?>selected<?php } ?>>
-						<?php esc_html_e( 'Light', 'recaptcha-woo' ); ?>
-					</option>
-					<option value="dark"<?php if(get_option('rcfwc_theme') == "dark") { ?>selected<?php } ?>>
-						<?php esc_html_e( 'Dark', 'recaptcha-woo' ); ?>
-					</option>
-				</select>
-			</td>
-		</tr>
+							<?php if ( class_exists( 'WooCommerce' ) ) { ?>
+								<?php $available_gateways = WC()->payment_gateways->get_available_payment_gateways(); ?>
+								<?php if(!empty($available_gateways)) { ?>
+									<div class="rcfwc-toggle-section">
+										<div class="rcfwc-toggle-header" id="toggleButtonSkipMethods">
+											<?php echo __('Payment Methods to Skip', 'recaptcha-woo'); ?>
+											<span class="dashicons dashicons-arrow-down"></span>
+										</div>
+										<div class="rcfwc-toggle-content" id="toggleContentSkipMethods" style="display: none;">
+											<p class="rcfwc-help-text">
+												<?php echo __("If selected below, reCAPTCHA check will not be run for that specific payment method.", 'recaptcha-woo'); ?>
+												<br/>
+												<?php echo __("Useful for 'Express Checkout' payment methods compatibility.", 'recaptcha-woo'); ?>
+											</p>
 
-		<tr valign="top">
-			<th scope="row" style="padding-bottom: 0;">
-			<p style="font-size: 19px; margin-top: 0; margin-bottom: 0;"><?php echo __( 'WordPress Forms:', 'recaptcha-woo' ); ?></p>
-			</th>
-		</tr>
+											<?php
+											$selected_payment_methods = get_option('rcfwc_selected_payment_methods', array());
+											if(!$selected_payment_methods) $selected_payment_methods = array();
+											if(!empty($available_gateways)) { ?>
+												<div class="rcfwc-payment-methods">
+												<?php foreach ( $available_gateways as $gateway ) : ?>
+													<div class="rcfwc-payment-method">
+														<input type="checkbox" name="rcfwc_selected_payment_methods[]" class="rcfwc-checkbox"
+														value="<?php echo esc_attr( $gateway->id ); ?>" <?php echo in_array( $gateway->id, $selected_payment_methods, true ) ? 'checked' : ''; ?> >
+														<label><?php echo __("Skip:", 'recaptcha-woo'); ?> <?php echo esc_html( $gateway->get_title() ); ?></label>
+													</div>
+												<?php endforeach; ?>
+												</div>
+											<?php } ?>
+										</div>
+									</div>
 
-		<tr valign="top">
-			<th scope="row">
-			<?php echo __( 'WordPress Login', 'recaptcha-woo' ); ?>
-			</th>
-			<td><input type="checkbox" name="rcfwc_login" <?php if(get_option('rcfwc_login')) { ?>checked<?php } ?>></td>
-		</tr>
+									<script type="text/javascript">
+										document.getElementById("toggleButtonSkipMethods").addEventListener("click", function() {
+											var content = document.getElementById("toggleContentSkipMethods");
+											var arrow = this.querySelector('.dashicons');
+											if (content.style.display === "none") {
+												content.style.display = "block";
+												arrow.className = "dashicons dashicons-arrow-up";
+											} else {
+												content.style.display = "none";
+												arrow.className = "dashicons dashicons-arrow-down";
+											}
+										});
+									</script>
+								<?php } ?>
+							<?php } ?>
 
-		<tr valign="top">
-			<th scope="row">
-			<?php echo __( 'WordPress Register', 'recaptcha-woo' ); ?>
-			</th>
-			<td><input type="checkbox" name="rcfwc_register" <?php if(get_option('rcfwc_register')) { ?>checked<?php } ?>></td>
-		</tr>
+                        </div>
+                    </div>
 
-		<tr valign="top">
-			<th scope="row">
-			<?php echo __( 'Reset Password', 'recaptcha-woo' ); ?>
-			</th>
-			<td><input type="checkbox" name="rcfwc_woo_reset" <?php if(get_option('rcfwc_woo_reset')) { ?>checked<?php } ?>></td>
-		</tr>
+                    <div class="rcfwc-card">
+                        <div class="rcfwc-card-header">
+                            <h2><?php echo __( 'Other Settings', 'recaptcha-woo' ); ?></h2>
+                        </div>
+                        <div class="rcfwc-card-content">
+                            <div class="rcfwc-form-group">
+                                <div class="rcfwc-checkbox-group">
+                                    <input type="checkbox" name="rcfwc_scripts_all" class="rcfwc-checkbox" <?php if(get_option('rcfwc_scripts_all', true)) { ?>checked<?php } ?>>
+                                    <label class="rcfwc-form-label"><?php echo __( 'Load scripts on all pages?', 'recaptcha-woo' ); ?></label>
+                                </div>
+                          <p class="rcfwc-help-text">
+                                    <?php echo __( 'If unchecked, scripts will only load on the WP Login, My Account, and Checkout pages.', 'recaptcha-woo' ); ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-  	<tr valign="top">
-  		<th scope="row" style="padding-bottom: 0;">
-  		<p style="font-size: 19px; margin-top: 0; margin-bottom: 0;"><?php echo __( 'WooCommerce Forms:', 'recaptcha-woo' ); ?></p>
-  		</th>
-  	</tr>
+                    <?php submit_button(__('Save Changes', 'recaptcha-woo'), 'primary rcfwc-submit-btn'); ?>
+                </form>
+            </div>
 
-    <tr valign="top" <?php if ( !class_exists( 'WooCommerce' ) ) { ?>style="opacity: 0.5; pointer-events: none;"<?php } ?>>
-			<th scope="row">
-			<?php echo __( 'WooCommerce Login', 'recaptcha-woo' ); ?>
-			</th>
-			<td><input type="checkbox" name="rcfwc_woo_login" <?php if(get_option('rcfwc_woo_login')) { ?>checked<?php } ?>></td>
-    </tr>
+            <div class="rcfwc-sidebar">
+                <div class="rcfwc-info-card">
+                    <h3><?php echo __( 'About the Developer', 'recaptcha-woo' ); ?></h3>
+                    <p style="margin: 0;"><?php echo __( '100% free plugin developed by', 'recaptcha-woo' ); ?> <a href="https://twitter.com/ElliotSowersby" target="_blank">Elliot Sowersby</a> (<a href="https://www.relywp.com/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank">RelyWP</a>) 🙌</p>
+                </div>
 
-    <tr valign="top" <?php if ( !class_exists( 'WooCommerce' ) ) { ?>style="opacity: 0.5; pointer-events: none;"<?php } ?>>
-			<th scope="row">
-			<?php echo __( 'WooCommerce Register', 'recaptcha-woo' ); ?>
-			</th>
-			<td><input type="checkbox" name="rcfwc_woo_register" <?php if(get_option('rcfwc_woo_register')) { ?>checked<?php } ?>></td>
-    </tr>
-	
-    <tr valign="top" <?php if ( !class_exists( 'WooCommerce' ) ) { ?>style="opacity: 0.5; pointer-events: none;"<?php } ?>>
-			<th scope="row">
-				<?php echo __( 'WooCommerce Checkout', 'recaptcha-woo' ); ?>
-				<br/><br/>
-				<?php echo __( 'Guest Checkout Only', 'recaptcha-woo' ); ?>
-			</th>
-			<td>
-				<input type="checkbox" name="rcfwc_woo_checkout" <?php if(get_option('rcfwc_woo_checkout')) { ?>checked<?php } ?>>
-				<br/><br/>
-				<input type="checkbox" name="rcfwc_guest_only" <?php if(get_option('rcfwc_guest_only')) { ?>checked<?php } ?>>
-			</td>
-    </tr>
+                <div class="rcfwc-info-card">
+                    <h3><?php echo __( 'Support & Resources', 'recaptcha-woo' ); ?></h3>
+                    <ul>
+                        <li><a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank"><?php echo __( 'Leave a review', 'recaptcha-woo' ); ?> ⭐️⭐️⭐️⭐️⭐️</a></li>
+                        <li><a href="https://wordpress.org/support/plugin/recaptcha-woo" target="_blank"><?php echo __( 'Get support on the community forums', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://www.paypal.com/donate/?hosted_button_id=RX28BBH7L5XDS" target="_blank"><?php echo __( 'Donate to support future development', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://translate.wordpress.org/projects/wp-plugins/recaptcha-woo/" target="_blank"><?php echo __( 'Translate into your language', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://github.com/elliotsowersby/recaptcha-woo" target="_blank"><?php echo __( 'View on GitHub', 'recaptcha-woo' ); ?></a></li>
+                    </ul>
+                </div>
 
-	<tr valign="top" <?php if ( !class_exists( 'WooCommerce' ) ) { ?>style="opacity: 0.5; pointer-events: none;"<?php } ?>>
-		<th scope="row" style="padding-top: 0px;">
-			<?php echo __( 'Widget Location on Checkout', 'recaptcha-woo' ); ?>
-		</th>
-		<td style="padding-top: 0px;">
-			<select name="rcfwc_woo_checkout_pos">
-				<option value="beforepay" <?php if (!get_option('rcfwc_woo_checkout_pos') || get_option('rcfwc_woo_checkout_pos') == "beforepay") { ?>selected<?php } ?>>
-					<?php esc_html_e('Before Payment', 'recaptcha-woo'); ?>
-				</option>
-				<option value="afterpay" <?php if (get_option('rcfwc_woo_checkout_pos') == "afterpay") { ?>selected<?php } ?>>
-					<?php esc_html_e('After Payment', 'recaptcha-woo'); ?>
-				</option>
-				<option value="beforebilling" <?php if (get_option('rcfwc_woo_checkout_pos') == "beforebilling") { ?>selected<?php } ?>>
-					<?php esc_html_e('Before Billing', 'recaptcha-woo'); ?>
-				</option>
-				<option value="afterbilling" <?php if (get_option('rcfwc_woo_checkout_pos') == "afterbilling") { ?>selected<?php } ?>>
-					<?php esc_html_e('After Billing', 'recaptcha-woo'); ?>
-				</option>
-			</select>
-		</td>
-	</tr>
-
-    </table>
-
-	<?php if ( class_exists( 'WooCommerce' ) ) { ?>
-
-		<?php $available_gateways = WC()->payment_gateways->get_available_payment_gateways(); ?>
-
-		<?php if(!empty($available_gateways)) { ?>
-
-		<p style="font-size: 15px; font-weight: 600; margin-top: 0;">
-			<?php echo __('Payment Methods to Skip', 'recaptcha-woo'); ?>
-			<span id="toggleButtonSkipMethods" class="dashicons dashicons-arrow-down" style="cursor:pointer;"></span> <!-- arrow for toggling -->
-		</p>
-
-		<div id="toggleContentSkipMethods" style="display: none;"> <!-- Initially hidden -->
-
-			<i style="font-size: 10px;">
-			<?php echo __("If selected below, reCAPTCHA check will not be run for that specific payment method.", 'recaptcha-woo'); ?>
-			<br/>
-			<?php echo __("Useful for 'Express Checkout' payment methods compatibility.", 'recaptcha-woo'); ?>
-			</i>
-
-			<?php
-			$selected_payment_methods = get_option('rcfwc_selected_payment_methods', array());
-			if(!$selected_payment_methods) $selected_payment_methods = array();
-			if(!empty($available_gateways)) { ?>
-				<div style="margin-top: 10px; max-width: 200px;">
-				<?php foreach ( $available_gateways as $gateway ) : ?>
-					<p>
-						<input type="checkbox" name="rcfwc_selected_payment_methods[]" style="float: none; margin-top: 2px;"
-						value="<?php echo esc_attr( $gateway->id ); ?>" <?php echo in_array( $gateway->id, $selected_payment_methods, true ) ? 'checked' : ''; ?> >
-						<label><?php echo __("Skip:", 'recaptcha-woo'); ?> <?php echo esc_html( $gateway->get_title() ); ?></label>
-					</p>
-				<?php endforeach; ?>
-				</div>
-			<?php } ?>
-		</div>
-
-		<script type="text/javascript">
-			document.getElementById("toggleButtonSkipMethods").addEventListener("click", function() {
-				var content = document.getElementById("toggleContentSkipMethods");
-				if (content.style.display === "none") {
-					content.style.display = "block"; // Show content
-					this.className = "dashicons dashicons-arrow-up"; // Arrow up
-				} else {
-					content.style.display = "none"; // Hide content
-					this.className = "dashicons dashicons-arrow-down"; // Arrow down
-				}
-			});
-		</script>
-
-		<?php } ?>
-
-	<?php } ?>
-
-	<table class="form-table">
-
-		<tr valign="top">
-			<th scope="row" style="padding-bottom: 0;">
-			<p style="font-size: 19px; margin-top: 0; margin-bottom: 0;"><?php echo __( 'Other Settings', 'recaptcha-woo' ); ?></p>
-			</th>
-		</tr>
-
-		<tr valign="top">
-			<th scope="row">
-			<?php echo __( 'Load scripts on all pages?', 'recaptcha-woo' ); ?>
-			</th>
-			<td>
-				<input type="checkbox" name="rcfwc_scripts_all" <?php if(get_option('rcfwc_scripts_all', true)) { ?>checked<?php } ?>>
-				<i style="font-size: 12px; margin-top: 5px;">
-					<?php echo __( 'If unchecked, scripts will only load on the WP Login, My Account, and Checkout pages.', 'recaptcha-woo' ); ?>
-			</i>
-			</td>
-		</tr>
-
-	</table>
-
-    <?php submit_button(); ?>
-
-	<br/>
-
-    <div class="rfw-admin-promo">
-
-		<p style="font-size: 15px; font-weight: bold;"><?php echo __( '100% free plugin developed by', 'recaptcha-woo' ); ?> <a href="https://twitter.com/ElliotSowersby" target="_blank" title="@ElliotSowersby on Twitter">Elliot Sowersby</a> (<a href="https://www.relywp.com/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank" title="RelyWP - WordPress Maintenance & Support">RelyWP</a>) 🙌</p>
-
-		<p style="font-size: 15px;">- <?php echo __( 'Find this plugin useful?', 'recaptcha-woo' ); ?> <a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank"><?php echo __( 'Please submit a review', 'recaptcha-woo' ); ?></a> <a href="https://wordpress.org/support/plugin/recaptcha-woo/reviews/#new-post" target="_blank" style="text-decoration: none;">⭐️⭐️⭐️⭐️⭐️</a></p>
-
-		<p style="font-size: 15px;">- <?php echo __( 'Need help? Have a suggestion?', 'recaptcha-woo' ); ?> <a href="https://wordpress.org/support/plugin/recaptcha-woo" target="_blank"><?php echo __( 'Create a support topic', 'recaptcha-woo' ); ?><span class="dashicons dashicons-external" style="font-size: 15px; margin-top: 5px; text-decoration: none;"></span></a></p>
-
-		<p style="font-size: 15px;">- <?php echo __( 'Want to support the developer?', 'recaptcha-woo' ); ?> <?php echo __( 'Feel free to', 'recaptcha-woo' ); ?> <a href="https://www.paypal.com/donate/?hosted_button_id=RX28BBH7L5XDS" target="_blank"><?php echo __( 'Donate', 'recaptcha-woo' ); ?><span class="dashicons dashicons-external" style="font-size: 15px; margin-top: 5px; text-decoration: none;"></span></a></p>
-
-		<p style="font-size: 12px;">
-			
-			<a href="https://translate.wordpress.org/projects/wp-plugins/recaptcha-woo/" target="_blank"><?php echo __( 'Translate into your language', 'recaptcha-woo' ); ?><span class="dashicons dashicons-external" style="font-size: 15px; margin-top: 2px; text-decoration: none;"></span></a>
-			
-			<br/>
-			
-			<a href="https://github.com/elliotsowersby/recaptcha-woo" target="_blank"><?php echo __( 'View on GitHub', 'recaptcha-woo' ); ?><span class="dashicons dashicons-external" style="font-size: 15px; margin-top: 2px; text-decoration: none;"></span></a>
-		
-		</p>
-
+                <div class="rcfwc-info-card">
+                    <h3><?php echo __( 'Other Plugins', 'recaptcha-woo' ); ?></h3>
+                    <ul>
+                        <li><a href="https://wordpress.org/plugins/simple-cloudflare-turnstile/" target="_blank"><?php echo __( 'Simple Cloudflare Turnstile', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://couponaffiliates.com/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Coupon Affiliates for WooCommerce', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://relywp.com/plugins/tax-exemption-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Tax Exemption for WooCommerce', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://relywp.com/plugins/better-coupon-restrictions-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Better Coupon Restrictions', 'recaptcha-woo' ); ?></a></li>
+                              <li><a href="https://relywp.com/plugins/advanced-customer-reports-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Advanced Customer Reports', 'recaptcha-woo' ); ?></a></li>
+                        <li><a href="https://relywp.com/plugins/ai-text-to-speech/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'AI Text to Speech', 'recaptcha-woo' ); ?></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
-
-	<br/>
-
-    <div class="rfw-admin-promo">
-
-		<p style="font-size: 15px; font-weight: bold;"><?php echo __( 'Check out our other plugins:', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://wordpress.org/plugins/simple-cloudflare-turnstile/" target="_blank"><?php echo __( 'Simple Cloudflare Turnstile', 'recaptcha-woo' ); ?></a> - <?php echo __( 'A user-friendly, privacy-preserving reCAPTCHA alternative.', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://couponaffiliates.com/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Coupon Affiliates for WooCommerce', 'recaptcha-woo' ); ?></a> - <?php echo __( 'Create a coupon-based affiliate plugin.', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://relywp.com/plugins/tax-exemption-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Tax Exemption for WooCommerce', 'recaptcha-woo' ); ?></a> - <?php echo __( 'Allow customers to easily claim tax/VAT exemption.', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://relywp.com/plugins/better-coupon-restrictions-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Better Coupon Restrictions for WooCommerce', 'recaptcha-woo' ); ?></a> - <?php echo __( 'Add advanced coupon restrictions to WooCommerce.', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://relywp.com/plugins/advanced-customer-reports-woocommerce/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'Advanced Customer Reports for WooCommerce', 'recaptcha-woo' ); ?></a> - <?php echo __( 'View detailed analytics and data for each of your customers.', 'recaptcha-woo' ); ?></p>
-
-		<p style="font-size: 15px;">- <a href="https://relywp.com/plugins/ai-text-to-speech/?utm_campaign=recaptcha-woo-plugin&utm_source=plugin-settings&utm_medium=promo" target="_blank"><?php echo __( 'AI Text to Speech', 'recaptcha-woo' ); ?></a> - <?php echo __( 'Generate and display an AI audio version of your posts.', 'recaptcha-woo' ); ?></p>
-
-	<br/><br/><br/>
-
-</form>
 </div>
 
 <?php } ?>
