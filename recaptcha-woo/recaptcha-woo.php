@@ -2,7 +2,7 @@
 /**
 * Plugin Name: reCAPTCHA for WooCommerce
 * Description: Add Google reCAPTCHA to your WooCommerce Checkout, Login, and Registration Forms.
-* Version: 1.4.5
+* Version: 1.4.7
 * Author: Elliot Sowersby, RelyWP
 * Author URI: https://www.relywp.com
 * License: GPLv3 or later
@@ -130,7 +130,14 @@ function rcfwc_field_checkout_block() {
 	<?php if ( !$guest || ( $guest && !is_user_logged_in() ) ) {
 		if($key && $secret) {
 			?>
-			<div class="g-recaptcha" <?php if($theme == "dark") { ?>data-theme="dark" <?php } ?>data-sitekey="<?php echo $key; ?>"></div>
+			<div
+				class="g-recaptcha"
+				id="g-recaptcha-woo-checkout"
+				<?php if($theme == "dark") { ?>data-theme="dark" <?php } ?>
+				data-sitekey="<?php echo $key; ?>"
+				data-callback="rcfwcRecaptchaCallback"
+				data-expired-callback="rcfwcRecaptchaExpired"
+			></div>
 			<br/>
 			<?php
 		}
@@ -348,9 +355,9 @@ if(!empty(get_option('rcfwc_key')) && !empty(get_option('rcfwc_secret'))) {
   		}
 
 		function rcfwc_checkout_block_check($order, $request) {
-			// Skip if reCAPTCHA disabled for payment method
-			$skip = 0;
+
 			if ( $request->get_method() === 'POST' ) {
+
 				if ( $request->get_param( 'payment_method' ) !== null ) {
 					$chosen_payment_method = sanitize_text_field( $request->get_param( 'payment_method' ) );
 					// Retrieve the selected payment methods from the rcfwc_selected_payment_methods option
@@ -360,6 +367,27 @@ if(!empty(get_option('rcfwc_key')) && !empty(get_option('rcfwc_secret'))) {
 						if ( in_array( $chosen_payment_method, $selected_payment_methods, true ) ) {
 							return $order;
 						}
+					}
+				}
+
+				// Additional skip: WooPayments Express or Stripe Express (Apple Pay / Google Pay / Link) on block checkout.
+				$payment_method = $request->get_param( 'payment_method' );
+				$payment_data   = $request->get_param( 'payment_data' );
+				if ( is_array( $payment_data ) ) {
+					foreach ( $payment_data as $pd_item ) {
+						if ( is_array( $pd_item ) && isset( $pd_item['key'] ) ) {
+							$key   = $pd_item['key'];
+							$value = isset( $pd_item['value'] ) ? $pd_item['value'] : '';
+							if ( in_array( $key, array( 'express_payment_type', 'payment_request_type' ), true ) && ! empty( $value ) ) {
+								$express_detected = true;
+								break;
+							}
+						}
+					}
+					// Allow customization via filter, defaults to skip when WooPayments or Stripe express is detected.
+					$skip_on_express = apply_filters( 'recaptcha_skip_on_express_pay', ( ($payment_method === 'woocommerce_payments' || $payment_method === 'stripe') && $express_detected ), $payment_method, $payment_data, $request );
+					if ( $skip_on_express ) {
+						return $order;
 					}
 				}
 
@@ -381,8 +409,11 @@ if(!empty(get_option('rcfwc_key')) && !empty(get_option('rcfwc_secret'))) {
 						throw new \Exception( __( 'Please complete the reCAPTCHA to verify that you are not a robot.', 'recaptcha-woo' ));
 					}
 				}
+				
 			}
-			return $order;	
+			
+			return $order;
+
 		}
   	}
 
@@ -391,8 +422,14 @@ if(!empty(get_option('rcfwc_key')) && !empty(get_option('rcfwc_secret'))) {
   		add_action('woocommerce_login_form','rcfwc_field');
   		add_action('authenticate', 'rcfwc_woo_login_check', 21, 1);
   		function rcfwc_woo_login_check($user){
+
+			// Check skip
+			if(!isset($user->ID)) { return $user; }
+			if(!isset($_POST['woocommerce-login-nonce'])) { return $user; } // Skip if not WooCommerce login
 			if(defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST) { return $user; } // Skip XMLRPC
 			if(defined( 'REST_REQUEST' ) && REST_REQUEST) { return $user; } // Skip REST API
+
+			// Check
   			if(isset($_POST['woocommerce-login-nonce'])) {
   				$check = rcfwc_recaptcha_check();
   				$success = $check['success'];
@@ -409,6 +446,8 @@ if(!empty(get_option('rcfwc_key')) && !empty(get_option('rcfwc_secret'))) {
   		add_action('woocommerce_register_form','rcfwc_field');
   		add_action('woocommerce_register_post', 'rcfwc_woo_register_check', 10, 3);
   		function rcfwc_woo_register_check($username, $email, $validation_errors) {
+			if(defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST) { return; } // Skip XMLRPC
+			if(defined( 'REST_REQUEST' ) && REST_REQUEST) { return; } // Skip REST API
   			if(!is_checkout()) {
   				$check = rcfwc_recaptcha_check();
   				$success = $check['success'];
