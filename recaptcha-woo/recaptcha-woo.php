@@ -9,7 +9,7 @@
 * Text Domain: recaptcha-woo
 *
 * WC requires at least: 3.4
-* WC tested up to: 10.0
+* WC tested up to: 10.9.4
 **/
 
 include( plugin_dir_path( __FILE__ ) . 'admin-options.php');
