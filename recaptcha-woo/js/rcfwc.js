@@ -5,7 +5,21 @@ jQuery( document ).ready(function() {
             if (typeof grecaptcha !== "undefined" && typeof grecaptcha.reset === "function") {
                 var count = 0;
                 jQuery(".g-recaptcha").each(function () {
-                    grecaptcha.reset(count);
+                    var widgetId = jQuery(this).data('rcfwc-widget-id');
+                    // Container was replaced by a checkout fragment refresh (e.g. "Before Submit Button"), so render it again
+                    if (!this.firstElementChild && typeof grecaptcha.render === "function") {
+                        try {
+                            widgetId = grecaptcha.render(this, {
+                                sitekey: this.getAttribute('data-sitekey'),
+                                theme: this.getAttribute('data-theme') || 'light'
+                            });
+                            jQuery(this).data('rcfwc-widget-id', widgetId);
+                        } catch (e) {}
+                    } else {
+                        try {
+                            grecaptcha.reset(typeof widgetId !== 'undefined' ? widgetId : count);
+                        } catch (e) {}
+                    }
                     count++;
                 });
             }

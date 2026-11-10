@@ -3,8 +3,8 @@ Contributors: ElliotVS, RelyWP
 Tags: recaptcha,woocommerce,checkout,spam,protect
 Donate link: https://www.paypal.com/donate/?hosted_button_id=RX28BBH7L5XDS
 Requires at least: 4.7
-Tested up to: 7.0.2
-Stable Tag: 1.4.7
+Tested up to: 7.1
+Stable Tag: 1.5.0
 License: GPLv3 or later.
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -77,6 +77,34 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 2. Example reCAPTCHA on the Checkout Page
 
 == Changelog ==
+
+= Version 1.5.0 - 9th November 2026 =
+- New: Added "WooCommerce Pay for Order Page" option to protect the Pay-for-Order page with reCAPTCHA.
+- New: Added a "Before Submit Button" position option for reCAPTCHA on WooCommerce checkout page.
+- New: Added "Only on wp-login.php" sub-options for the WordPress Login and Register integrations, so the reCAPTCHA only loads on the wp-login.php page.
+- New: Added a "Custom Failed Verification Message" option to override the default error text shown to users.
+- New: Added whitelist options to skip the reCAPTCHA check for logged-in users, specific IP addresses, and specific User-Agent substrings.
+- New: Added support for defining the reCAPTCHA site and secret keys via `RECAPTCHA_WOO_SITE_KEY` and `RECAPTCHA_WOO_SECRET_KEY` constants in `wp-config.php` (overrides the saved options).
+- Tweak: Replaced PHP `$_SESSION` usage on the WP login check with short-lived, token-based transients. Page-cache friendly and no longer requires PHP sessions.
+- Tweak: WooCommerce checkout now also hooks into `woocommerce_after_checkout_validation` and prevents duplicate verification within a single request.
+- Tweak: Skip non-checkout `wc-ajax` requests (e.g. payment gateway pre-validation) so the reCAPTCHA token isn't burned before the actual checkout submission.
+- Tweak: Added `remoteip` parameter when calling the Google siteverify endpoint, including support for Cloudflare and common proxy headers.
+- Tweak: Switched the Store API endpoint registration to `woocommerce_loaded` (priority 20) and added schema `context` and `sanitize_callback`.
+- Tweak: Added an `rcfwc_wp_login_checks` filter and automatically skip the global WP login reCAPTCHA check when a WooCommerce login form is submitted but the WooCommerce Login integration is disabled.
+- Tweak: Added a `rcfwc_whitelisted` filter for programmatically bypassing the reCAPTCHA check.
+- Tweak: Added an `rcfwc_is_plugin_active()` helper that is multisite-aware.
+- Tweak: Declared HPOS compatibility for `cart_checkout_blocks` and `product_block_editor` features in addition to custom order tables.
+- Tweak: Added an admin notice on the settings page when API keys are being loaded from `wp-config.php` constants, and the key fields are locked (the secret key is no longer shown) while they are.
+- Fix: Fixed an undefined `$express_detected` variable when checking express payment methods on the block checkout.
+- Fix: Hardened the response handling of the Google siteverify call against malformed responses and `WP_Error` results.
+- Fix: Sanitized the reCAPTCHA token coming from the Store API extensions data on the block checkout.
+- Fix: Properly clear the block-checkout verification transient after the order has been processed.
+- Security Fix: The WooCommerce "Reset Password" reCAPTCHA check could be bypassed by sending the lost password nonce under the `_wpnonce` field name instead of `woocommerce-lost-password-nonce`. The check now runs for every WooCommerce lost password submission, regardless of the nonce field name. Thanks to Peter Tang (Patchstack) for reporting.
+- Security Fix: Hardened the WooCommerce "Login" reCAPTCHA check in the same way, so it can no longer be skipped by sending the login nonce as `_wpnonce` instead of `woocommerce-login-nonce`.
+- Security Fix: The WordPress login reCAPTCHA check is no longer skipped on wp-login.php when a WooCommerce login nonce field is added to the request.
+- Security Fix: The WordPress login and lost password reCAPTCHA checks could be skipped by requesting wp-login.php through an encoded URL (e.g. `/wp-login.ph%70`). wp-login.php is now detected by it actually running, not only by the request URL.
+- Security Fix: The WooCommerce "Reset Password" reCAPTCHA check could be skipped by posting the form to `admin-ajax.php` with `/wp-login.php` in the query string.
+- Security Fix: The WooCommerce "Login" and "Register" reCAPTCHA checks could be skipped by posting the form to `xmlrpc.php`.
 
 = Version 1.4.7 - 5th November 2025 =
 - Fix: Fixed an issue with some express payment methods. These will now automatically skip the reCAPTCHA check preventing the error message from showing.
